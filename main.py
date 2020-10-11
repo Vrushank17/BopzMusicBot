@@ -3,9 +3,11 @@ from discord.ext import commands
 
 import datetime
 import pytz
+from time import sleep
 
 from threading import Thread
 from flask import Flask
+import asyncio
 
 import requests
 from bs4 import BeautifulSoup
@@ -21,6 +23,24 @@ def run():
     app.run(host='0.0.0.0', port=8080)
 
 time = datetime.datetime.utcnow()
+
+def billboardTask():
+    url='https://www.billboard.com/charts/hot-100'
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, 'html.parser')
+    results = soup.find(class_='chart-list container')
+
+    song_names = results.find_all('span', class_="chart-element__information__song text--truncate color--primary")
+    songs = []
+    for i in range(0, 10):
+        songs.append(song_names[i].text.strip())
+
+    artist_names = results.find_all('span', class_="chart-element__information__artist text--truncate color--secondary")
+    artists = []
+    for i in range(0, 10):
+        artists.append(artist_names[i].text.strip())
+        
+    return [songs, artists]
 
 # on intialization event
 @bot.event
@@ -49,11 +69,11 @@ async def help(ctx):
 
     embed.add_field(name=':newspaper: Help', value='`b!help` \n')
 
-    embed.add_field(name=':musical_note: Music', value='`b!play <song>` \n', inline=False)
+    embed.add_field(name=':musical_note: Music', value='`b!play <song>` \n')
 
-    embed.add_field(name=':man_pouting: Billboard', value='`b!bb` \n `b!billboard` \n', inline=False)
+    embed.add_field(name=':man_pouting: Billboard', value='`b!bb` \n `b!billboard` \n')
 
-    embed.add_field(name=':information_source: Bot Info', value='`b!botinfo`', inline=False)
+    embed.add_field(name=':information_source: Bot Info', value='`b!botinfo`')
 
     await ctx.send(embed=embed)
 
@@ -61,22 +81,10 @@ async def help(ctx):
 
 @bot.command(aliases=['billbd', 'billboard','bboard'])
 async def bb(ctx):
-    url='https://www.billboard.com/charts/hot-100'
-    page = requests.get(url)
-    soup = BeautifulSoup(page.content, 'html.parser')
-    results = soup.find(class_='chart-list container')
-
-    song_names = results.find_all('span', class_="chart-element__information__song text--truncate color--primary")
-    songs = []
-    for i in range(0, 10):
-        songs.append(song_names[i].text.strip())
-
-    artist_names = results.find_all('span', class_="chart-element__information__artist text--truncate color--secondary")
-    artists = []
-    for i in range(0, 10):
-        artists.append(artist_names[i].text.strip())
         
     member = bot.get_user(ctx.author.id)
+
+    data = billboardTask()
 
     embed = discord.Embed(title='**Billboard Top 10**', color=0x43E194, timestamp=time)
 
@@ -85,7 +93,7 @@ async def bb(ctx):
     embed.set_footer(text=f'Requested by {ctx.author}', icon_url=f'{member.avatar_url}')
 
     for i in range(0,10):
-        embed.add_field(name=f'{i+1}. {songs[i]}', value=f'by {artists[i]}', inline=False)
+        embed.add_field(name=f'{i+1}. {data[0][i]}', value=f'by {data[1][i]}', inline=False)
 
     await ctx.send(embed=embed)
 
@@ -100,6 +108,26 @@ async def play(ctx, song):
     embed.set_footer(text=f'Requested by {ctx.author}', icon_url=f'{member.avatar_url}')
 
     embed.add_field(name='Playing', value='Song `currently under development`')
+
+    vc = ctx.message.author.voice
+    if(vc == None):
+        await ctx.send("You must be in a voice channel to use this")
+    
+    else:
+        await vc.channel.connect()
+        await ctx.send(embed=embed)
+
+@bot.command()
+async def stop(ctx):
+    member = bot.get_user(ctx.author.id)
+
+    embed = discord.Embed(title='**Song Player**', color=0x43E194, timestamp=time)
+
+    embed.set_author(name='Bopz', icon_url='https://i.imgur.com/3sPd3Mj.png')
+    
+    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=f'{member.avatar_url}')
+
+    await discord.VoiceClient.disconnect()
 
     await ctx.send(embed=embed)
 
@@ -118,7 +146,7 @@ async def botinfo(ctx):
 
     embed.add_field(name='Platform', value='[Dell Inspiron 5559](https://www.dell.com/support/home/en-us/product-support/product/inspiron-15-5559-laptop/docs)', inline=False)
 
-    embed.add_field(name='Github Repository', value='[Bot Page](htstps://github.com/Vrushank17/Bopz)', inline=False)
+    embed.add_field(name='Github Repository', value='[Bot Page](https://github.com/Vrushank17/Bopz)', inline=False)
 
     await ctx.send(embed=embed)
 
