@@ -119,17 +119,8 @@ async def play(ctx, song):
 
 @bot.command()
 async def stop(ctx):
-    member = bot.get_user(ctx.author.id)
-
-    embed = discord.Embed(title='**Song Player**', color=0x43E194, timestamp=time)
-
-    embed.set_author(name='Bopz', icon_url='https://i.imgur.com/3sPd3Mj.png')
-    
-    embed.set_footer(text=f'Requested by {ctx.author}', icon_url=f'{member.avatar_url}')
-
-    await discord.VoiceClient.disconnect()
-
-    await ctx.send(embed=embed)
+    vc = ctx.message.author.voice
+    await vc.channel.connect()
 
 
 @bot.command()
