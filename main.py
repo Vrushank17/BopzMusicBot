@@ -16,12 +16,6 @@ bot = commands.Bot(command_prefix='b!')
 
 bot.remove_command('help')
 
-app = Flask('')
-@app.route('/')
-
-def run():
-    app.run(host='0.0.0.0', port=8080)
-
 time = datetime.datetime.utcnow()
 
 def billboardTask():
